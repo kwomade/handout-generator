@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Generierte Handouts / Arbeitsdateien
+*_Handout.docx
+*_Handout.md
+txt/
+pdftxt/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
