@@ -69,7 +69,17 @@ Weitere Regeln:
 - Deutsch, per „du", Fließtext statt Stichpunkt-Wüste.
 - Fachbegriff beim ersten Mal erklären (deutsch **und** englisch).
 - Am Ende ein **Selbsttest** mit ~10–15 Fragen und Antworten zum Abdecken.
-- Markdown-Umfang, den der Konverter versteht: Überschriften `#`–`####`, Absätze, Aufzählungen `-`, Tabellen `| … |`, Codeblöcke ``` ``` ```, `**fett**`, `` `code` ``, Zitate/Merke-Kästen `>`.
+- Markdown-Umfang, den der Konverter versteht: Überschriften `#`–`####`, Absätze, Aufzählungen `-`, Tabellen `| … |`, Codeblöcke ``` ```lang ```, `**fett**`, `` `code` ``, Zitate/Merke-Kästen `>`.
+
+### Code richtig einsetzen (wichtig)
+Der Konverter rendert Codeblöcke als hervorgehobene **Code-Box** mit Syntax-Highlighting. Damit das greift:
+- **Immer die Sprache an den öffnenden Zaun schreiben:** ``` ```java ```, ``` ```python ```, ``` ```sql ```, ``` ```json ```, ``` ```xml ```, ``` ```js ``` (unterstützt: java, python, sql, json, xml/html, js). Ohne Sprache gibt es keine Farben.
+- **Korrekte, vollständige, lauffähige** Beispiele schreiben (richtige Syntax, passende Klammern/Semikolons). Lieber ein kurzer, *fehlerfreier* Ausschnitt als ein langer.
+- **Kurz und fokussiert:** nur das zeigen, worum es geht (5–20 Zeilen). Große Dumps vermeiden.
+- **Konsistent mit Leerzeichen einrücken** (keine Tabs); der Konverter erhält Einrückung und Leerzeilen.
+- **Erklärung mitliefern:** ein, zwei Sätze *vor* dem Block (was passiert hier?) und ggf. **Kommentare im Code** (`//`, `#`, `--` werden grau hervorgehoben).
+- **Im Fließtext** einzelne Bezeichner, Schlüsselwörter, Datei- oder Wertangaben als `` `inline code` `` schreiben – das wird ebenfalls hervorgehoben.
+- Ausgaben/Konsolentexte mit ``` ```text ``` kennzeichnen (kein Highlighting, nur Monospace).
 
 ## Schritt 4 – .docx erzeugen
 ```bash
