@@ -2,7 +2,11 @@
 """Wandelt ein (Teilmengen-)Markdown in eine echte .docx um - ohne Microsoft Word.
 
 Aufruf:
-    python build_docx.py <input.md> <output.docx>
+    python build_docx.py <input.md> <output.docx> [--light] [--no-toc]
+
+Optionen:
+    --light    helles Code-Theme (druckfreundlich) statt des dunklen Bildschirm-Themes
+    --no-toc   kein Inhaltsverzeichnis einfuegen
 
 Unterstuetztes Markdown:
     # .. ####     Ueberschriften (Ebene 1-4)
@@ -19,9 +23,17 @@ import sys
 import re
 import pathlib
 
+# UTF-8-Ausgabe erzwingen (Windows-Konsole ist oft cp1252 -> Mojibake)
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except AttributeError:
+    pass
+
 try:
     from docx import Document
     from docx.shared import Pt, RGBColor, Cm
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
 except ImportError:
@@ -43,19 +55,35 @@ WORD_RE = re.compile(r'@?\w+')
 NUM_RE = re.compile(r'\d+(\.\d+)?')
 
 # ---------------------------------------------------------------------------
-# Farben fuer Syntax-Highlighting (dunkles Theme, VS-Code-artig)
+# Farbthemen fuer Codebloecke
+#   dark  = Bildschirm (fast schwarz, VS-Code-artig) - Standard
+#   light = Druck (heller Hintergrund, spart Toner, gut auf S/W-Druckern)
 # ---------------------------------------------------------------------------
-C_BG = "1E1E1E"       # Hintergrund der Code-Box (fast schwarz)
-C_BORDER = "3C3C3C"   # Rahmen der Code-Box
-C_TEXT = "D4D4D4"     # normaler Code-Text (hellgrau)
-C_KEYWORD = "569CD6"  # Schluesselwoerter (blau)
-C_STRING = "CE9178"   # Zeichenketten (orange)
-C_COMMENT = "6A9955"  # Kommentare (gruen)
-C_NUMBER = "B5CEA8"   # Zahlen (hellgruen)
-C_TAG = "569CD6"      # XML/HTML-Tags
-C_LABEL = "6E7781"    # Sprach-Label
+THEMES = {
+    "dark": {"BG": "1E1E1E", "BORDER": "3C3C3C", "TEXT": "D4D4D4",
+             "KEYWORD": "569CD6", "STRING": "CE9178", "COMMENT": "6A9955",
+             "NUMBER": "B5CEA8", "TAG": "569CD6"},
+    "light": {"BG": "F6F8FA", "BORDER": "D0D7DE", "TEXT": "24292E",
+              "KEYWORD": "0033B3", "STRING": "067D17", "COMMENT": "6A737D",
+              "NUMBER": "1750EB", "TAG": "0033B3"},
+}
+C_LABEL = "6E7781"    # Sprach-Label (auf weisser Seite, themenunabhaengig)
 
-# Farben fuer Tabellen und Merke-Kaesten
+# Aktive Code-Farben - werden von apply_theme() gesetzt.
+C_BG = C_BORDER = C_TEXT = C_KEYWORD = C_STRING = C_COMMENT = C_NUMBER = C_TAG = ""
+
+
+def apply_theme(name):
+    global C_BG, C_BORDER, C_TEXT, C_KEYWORD, C_STRING, C_COMMENT, C_NUMBER, C_TAG
+    t = THEMES.get(name, THEMES["dark"])
+    C_BG, C_BORDER, C_TEXT = t["BG"], t["BORDER"], t["TEXT"]
+    C_KEYWORD, C_STRING, C_COMMENT = t["KEYWORD"], t["STRING"], t["COMMENT"]
+    C_NUMBER, C_TAG = t["NUMBER"], t["TAG"]
+
+
+apply_theme("dark")
+
+# Farben fuer Tabellen und Merke-Kaesten (themenunabhaengig)
 T_HEADER = "2F5496"   # Tabellenkopf (dunkelblau)
 T_BAND = "EAF0F8"     # Zebra-Streifen (hellblau)
 T_BORDER = "C7D0E0"   # Tabellenrahmen (dezent)
@@ -428,18 +456,87 @@ def style_document(doc):
         section.right_margin = Cm(2.2)
 
 
+def _add_field(paragraph, instr, placeholder=""):
+    """Fuegt ein Word-Feld (z.B. TOC, PAGE) in einen Absatz ein."""
+    r1 = paragraph.add_run()
+    fld_begin = OxmlElement('w:fldChar')
+    fld_begin.set(qn('w:fldCharType'), 'begin')
+    r1._r.append(fld_begin)
+
+    r2 = paragraph.add_run()
+    instr_el = OxmlElement('w:instrText')
+    instr_el.set(qn('xml:space'), 'preserve')
+    instr_el.text = instr
+    r2._r.append(instr_el)
+
+    r3 = paragraph.add_run()
+    fld_sep = OxmlElement('w:fldChar')
+    fld_sep.set(qn('w:fldCharType'), 'separate')
+    r3._r.append(fld_sep)
+
+    if placeholder:
+        paragraph.add_run(placeholder)
+
+    r4 = paragraph.add_run()
+    fld_end = OxmlElement('w:fldChar')
+    fld_end.set(qn('w:fldCharType'), 'end')
+    r4._r.append(fld_end)
+
+
+def add_table_of_contents(doc):
+    """Fuegt eine Ueberschrift + TOC-Feld ein (Word fuellt es beim Oeffnen)."""
+    head = doc.add_paragraph()
+    run = head.add_run("Inhaltsverzeichnis")
+    run.bold = True
+    run.font.size = Pt(15)
+    run.font.name = 'Calibri'
+    run.font.color.rgb = RGBColor.from_string('1F3864')
+    head.paragraph_format.space_after = Pt(6)
+
+    p = doc.add_paragraph()
+    _add_field(p, ' TOC \\o "1-3" \\h \\z \\u ',
+               "(Inhaltsverzeichnis: Rechtsklick > Felder aktualisieren bzw. F9)")
+    doc.add_page_break()
+
+
+def add_page_numbers(doc):
+    """Zentrierte 'Seite X von Y'-Fusszeile in allen Abschnitten."""
+    for section in doc.sections:
+        p = section.footer.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.add_run("Seite ")
+        _add_field(p, ' PAGE ')
+        p.add_run(" von ")
+        _add_field(p, ' NUMPAGES ')
+        for r in p.runs:
+            r.font.size = Pt(9)
+            r.font.color.rgb = RGBColor.from_string('808080')
+
+
+def enable_update_fields(doc):
+    """Sorgt dafuer, dass Word Felder (TOC) beim Oeffnen aktualisiert."""
+    settings = doc.settings.element
+    if settings.find(qn('w:updateFields')) is None:
+        el = OxmlElement('w:updateFields')
+        el.set(qn('w:val'), 'true')
+        settings.append(el)
+
+
 # ---------------------------------------------------------------------------
 # Hauptparser
 # ---------------------------------------------------------------------------
-def build(md_path, docx_path):
+def build(md_path, docx_path, theme="dark", toc=True):
+    apply_theme(theme)
     lines = md_path.read_text(encoding="utf-8").splitlines()
     doc = Document()
     style_document(doc)
+    add_page_numbers(doc)
 
     in_code = False
     code_buf = []
     code_lang = ""
     table_rows = []
+    toc_done = False
 
     def flush_table():
         if table_rows:
@@ -494,6 +591,9 @@ def build(md_path, docx_path):
             heading = doc.add_heading(m.group(2), level=lvl)
             if lvl == 1:
                 add_border(heading, 'bottom', color='2E5496', sz='12', space='4')
+            if toc and not toc_done:
+                add_table_of_contents(doc)
+                toc_done = True
             continue
 
         m = BULLET_RE.match(line)
@@ -502,6 +602,8 @@ def build(md_path, docx_path):
             add_inline(para, m.group(1))
             if quoted:
                 para.paragraph_format.left_indent = Pt(36)
+                shade_paragraph(para, Q_BG)
+                add_border(para, 'left', color=Q_BAR, sz="24", space="10")
             continue
 
         para = doc.add_paragraph()
@@ -517,20 +619,26 @@ def build(md_path, docx_path):
         add_code_block(doc, code_buf, code_lang)
     flush_table()
 
+    if toc:
+        enable_update_fields(doc)
     doc.save(str(docx_path))
     print("OK\t%s" % docx_path)
 
 
 def main():
-    if len(sys.argv) < 3:
-        sys.stderr.write("usage: build_docx.py <input.md> <output.docx>\n")
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    flags = [a for a in sys.argv[1:] if a.startswith("--")]
+    if len(args) < 2:
+        sys.stderr.write("usage: build_docx.py <input.md> <output.docx> [--light] [--no-toc]\n")
         sys.exit(1)
-    md_path = pathlib.Path(sys.argv[1])
-    docx_path = pathlib.Path(sys.argv[2])
+    md_path = pathlib.Path(args[0])
+    docx_path = pathlib.Path(args[1])
+    theme = "light" if "--light" in flags else "dark"
+    toc = "--no-toc" not in flags
     if not md_path.is_file():
         sys.stderr.write("Eingabedatei nicht gefunden: %s\n" % md_path)
         sys.exit(1)
-    build(md_path, docx_path)
+    build(md_path, docx_path, theme=theme, toc=toc)
 
 
 if __name__ == "__main__":

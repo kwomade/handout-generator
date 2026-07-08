@@ -33,7 +33,16 @@ Sage dem Nutzer *vorher* in einem Satz, dass du Python einmalig installierst.
 ```bash
 "$PY" -c "import pypdf, docx" || "$PY" -m pip install --user pypdf python-docx
 ```
-(Optional für PowerPoint-Quellen zusätzlich `python-pptx`.)
+Für PowerPoint-Quellen zusätzlich `python-pptx`. Tipp: `pip install -r "<SKILL_DIR>/requirements.txt"` installiert alles auf einmal.
+
+**0.3b Fallback bei „externally-managed" (PEP 668, modernes Linux/Homebrew).**
+Schlägt `pip install --user` mit *„externally managed environment"* fehl, ein **venv im Skill-Ordner** anlegen und dessen Python als `$PY` verwenden:
+```bash
+"$PY" -m venv "<SKILL_DIR>/.venv"
+PY="<SKILL_DIR>/.venv/bin/python"   # Windows: <SKILL_DIR>/.venv/Scripts/python.exe
+"$PY" -m pip install -r "<SKILL_DIR>/requirements.txt"
+```
+Das venv ist in `.gitignore` – es bleibt lokal und wird nicht eingecheckt.
 
 **0.4 Fehlerfall (kein Adminrecht, gesperrtes EDU-/Firmengerät, kein Internet):**
 Nicht hängen bleiben, nicht endlos wiederholen. Dem Nutzer klar sagen:
@@ -46,16 +55,24 @@ Dann mit Schritt 2b weitermachen.
 Liste die Dateien im Zielordner (`*.pdf`, `*.png/*.jpg`, `*.pptx`, `*.md/*.txt`). Sehr große PDFs (> ~50 MB, z. B. komplette Lehrbücher) nur bei Bedarf/stichprobenartig verarbeiten, nicht komplett – das kostet unnötig Zeit.
 
 ## Schritt 2a – Inhalte extrahieren (Standardweg)
-PDF-Text mit dem beiliegenden Skript in einen Arbeitsordner schreiben:
+Text mit den beiliegenden Skripten in einen Arbeitsordner schreiben (`<SKILL_DIR>` = Ordner dieser SKILL.md; `<ARBEITSORDNER>` = Scratchpad/Temp, **nicht** der Projektordner):
 ```bash
-"$PY" "<SKILL_DIR>/scripts/extract_pdf.py" "<QUELLORDNER>" "<ARBEITSORDNER>/txt"
+"$PY" "<SKILL_DIR>/scripts/extract_pdf.py"  "<QUELLORDNER>" "<ARBEITSORDNER>/txt"
+"$PY" "<SKILL_DIR>/scripts/extract_pptx.py" "<QUELLORDNER>" "<ARBEITSORDNER>/txt"   # nur bei .pptx
 ```
-Danach die erzeugten `.txt`-Dateien lesen. `<SKILL_DIR>` ist der Ordner dieser SKILL.md; `<ARBEITSORDNER>` liegt im Scratchpad/Temp, nicht im Projekt.
+Die `.txt` enthalten `--- Seite N ---`-Marker (hilfreich zum Zitieren).
 
-## Schritt 2b – Fallback ohne PDF-Extraktion
+**Auf die Ausgabe achten – nicht blind alles lesen:**
+- `WARN_NO_TEXT` bei einer Datei = PDF ohne Textebene (**Scan**). Für *diese* Datei auf den Bild-Fallback (2b) wechseln.
+- Exit-Code `2` = *keine* Datei lieferte nutzbaren Text → komplett auf 2b umsteigen.
+
+**Kontext-Strategie (wichtig bei viel Material!):** Extrahierter Text kann riesig sein (ein Lehrbuch = mehrere 100 000 Zeichen) und sprengt sonst den Kontext. Deshalb **datei-/quellenweise** vorgehen: eine Quelle lesen → deren Kernaussagen als kurze Notizen sichern → nächste Quelle. Erst wenn alle Quellen verdichtet sind, das Handout aus den Notizen komponieren. Bei sehr vielen/großen Dateien je Quelle einen Subagenten zusammenfassen lassen und nur die Zusammenfassungen einsammeln. Niemals mehrere volle Rohtexte gleichzeitig in den Kontext ziehen.
+
+## Schritt 2b – Fallback ohne (brauchbare) Extraktion
 - **Bilder/Screenshots** direkt mit dem Read-Tool ansehen (das geht ohne Python).
 - **`.md/.txt`** direkt lesen.
-- Fehlt Folientext ganz, den Nutzer bitten, ihn zu exportieren – und das Handout aus dem verfügbaren Material + Fachwissen erstellen. Transparent kennzeichnen, worauf es beruht.
+- **Gescannte PDFs** (`WARN_NO_TEXT`): Wenn möglich Seiten als Bild ansehen, sonst den Nutzer um eine Textversion bitten.
+- Fehlt Text ganz, den Nutzer bitten, ihn zu exportieren – und das Handout aus dem verfügbaren Material + Fachwissen erstellen. Transparent kennzeichnen, worauf es beruht.
 
 ## Schritt 3 – Handout schreiben (didaktische Vorlage)
 Erstelle `<Ordnername_oder_Thema>_Handout.md`. **Erklären, nicht auflisten.** Jedes Kapitel nach diesem Muster:
@@ -85,7 +102,13 @@ Der Konverter rendert Codeblöcke als hervorgehobene **Code-Box** mit Syntax-Hig
 ```bash
 "$PY" "<SKILL_DIR>/scripts/build_docx.py" "<Thema>_Handout.md" "<Thema>_Handout.docx"
 ```
-Das Skript baut eine echte `.docx` (Überschriften, Tabellen, Codeblöcke, Merke-Kästen) – **ohne** Microsoft Word.
+Das Skript baut eine echte `.docx` – **ohne** Microsoft Word – mit professionellem Layout: Inhaltsverzeichnis, Seitenzahlen (Fußzeile), gestylte Tabellen (blauer Kopf, Zebra-Streifen), Merke-Kästen und **dunklen Code-Boxen mit Syntax-Highlighting**.
+
+Optionen:
+- `--light` → helles Code-Theme statt dunkel. **Frag den Nutzer bzw. wähle sinnvoll:** dunkel = am Bildschirm lesen; hell = zum **Ausdrucken** (spart Toner, besser auf S/W-Druckern).
+- `--no-toc` → ohne Inhaltsverzeichnis.
+
+Falls die Zieldatei in Word geöffnet ist, schlägt das Speichern mit *Permission denied* fehl → unter anderem Namen speichern oder den Nutzer bitten, die Datei zu schließen.
 
 ## Schritt 5 – Abschluss
 Dem Nutzer den Pfad zur `.docx` nennen, kurz den Aufbau zusammenfassen und offen kennzeichnen, falls Teile auf Fallback-Material beruhen. Anbieten, einzelne Kapitel zu vertiefen oder Übungsaufgaben zu ergänzen.
@@ -93,6 +116,7 @@ Dem Nutzer den Pfad zur `.docx` nennen, kurz den Aufbau zusammenfassen und offen
 ---
 
 ### Hinweise
-- Die Skripte sind reine Standard-Python-Skripte + `pypdf`/`python-docx` – identisch auf Windows, macOS, Linux.
+- Die Skripte sind reine Standard-Python-Skripte (`pypdf`, `python-docx`, optional `python-pptx`) – identisch auf Windows, macOS, Linux; Abhängigkeiten in `requirements.txt`.
 - Temporäre Dateien (extrahierter Text) gehören ins Temp-/Scratchpad-Verzeichnis, nicht in den Projektordner.
 - Installationsschritte sind Systemeingriffe: einmalig, transparent, mit Fallback.
+- Das Inhaltsverzeichnis füllt Word beim Öffnen selbst (Felder werden automatisch aktualisiert; ggf. „Ja" bestätigen oder F9).

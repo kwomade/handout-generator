@@ -11,6 +11,8 @@ Ein [Claude Code](https://claude.com/claude-code) **Skill**, der deine Kursunter
 ![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
+[![CI](https://github.com/kwomade/handout-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/kwomade/handout-generator/actions/workflows/ci.yml)
+
 </div>
 
 ---
@@ -33,9 +35,11 @@ Am Ende gibt's einen **Selbsttest** mit Fragen und Antworten zum Abdecken.
 ## ✨ Features
 
 - 🧠 **Erklärt statt aufzulisten** – Analogien, Schritt-für-Schritt-Beispiele, Merke-Kästen
-- 📄 **Echte `.docx`** – saubere Überschriften, Tabellen, Code-Blöcke, farbige Kästen (kein Word nötig!)
-- 🗂️ **Frisst fast alles** – PDF, Screenshots/Bilder, Text- und Markdown-Dateien
-- 🖥️ **Läuft überall** – Windows, macOS & Linux mit demselben Code
+- 📄 **Echte `.docx`** – Inhaltsverzeichnis, Seitenzahlen, saubere Überschriften, farbige Kästen (kein Word nötig!)
+- 🎨 **Profi-Tabellen** – blauer Kopf, Zebra-Streifen, dezente Rahmen
+- 🌑 **Code mit Syntax-Highlighting** – dunkles Theme für den Bildschirm, helles (`--light`) zum Drucken; Java, Python, SQL, JSON, XML, JS
+- 🗂️ **Frisst fast alles** – PDF, PowerPoint (`.pptx`), Screenshots/Bilder, Text- und Markdown-Dateien
+- 🖥️ **Läuft überall** – Windows, macOS & Linux mit demselben Code (per CI getestet)
 - 🛠️ **Selbst-Setup** – prüft beim ersten Lauf die nötigen Tools und installiert sie bei Bedarf
 - 📝 **Selbsttest inklusive** – Prüfungsfragen mit Lösungen am Ende jedes Handouts
 
@@ -91,13 +95,15 @@ Das war's. Nach ein paar Sekunden liegt eine `<Thema>_Handout.docx` im Ordner. �
 |-------|---------|
 | `SKILL.md` | Anleitung für Claude: Ablauf, Handout-Vorlage, Setup-Logik |
 | `scripts/extract_pdf.py` | Zieht Text aus PDFs (mit `pypdf`) |
+| `scripts/extract_pptx.py` | Zieht Text aus PowerPoint (mit `python-pptx`) |
 | `scripts/build_docx.py` | Baut aus Markdown eine echte `.docx` (mit `python-docx`) |
 
-Die beiden Skripte sind eigenständig und laufen auch ohne Claude:
+Die Skripte sind eigenständig und laufen auch ohne Claude:
 
 ```bash
 python scripts/extract_pdf.py  "ordner-mit-pdfs"  "ausgabe/txt"
-python scripts/build_docx.py   "mein_handout.md"  "mein_handout.docx"
+python scripts/build_docx.py   "mein_handout.md"  "mein_handout.docx"            # dunkle Code-Boxen
+python scripts/build_docx.py   "mein_handout.md"  "druck.docx"  --light --no-toc # zum Ausdrucken
 ```
 
 > ℹ️ **Windows-Tipp:** Nutze `py` statt `python`, falls `python` nur den Microsoft-Store öffnet.
