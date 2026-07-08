@@ -21,7 +21,7 @@ import pathlib
 
 try:
     from docx import Document
-    from docx.shared import Pt, RGBColor
+    from docx.shared import Pt, RGBColor, Cm
     from docx.oxml.ns import qn
     from docx.oxml import OxmlElement
 except ImportError:
@@ -43,17 +43,24 @@ WORD_RE = re.compile(r'@?\w+')
 NUM_RE = re.compile(r'\d+(\.\d+)?')
 
 # ---------------------------------------------------------------------------
-# Farben fuer Syntax-Highlighting (helles, druckfreundliches Schema)
+# Farben fuer Syntax-Highlighting (dunkles Theme, VS-Code-artig)
 # ---------------------------------------------------------------------------
-C_BG = "F6F8FA"       # Hintergrund der Code-Box
-C_BORDER = "D0D7DE"   # Rahmen
-C_TEXT = "24292E"     # normaler Code-Text
-C_KEYWORD = "0033B3"  # Schluesselwoerter (blau)
-C_STRING = "067D17"   # Zeichenketten (gruen)
-C_COMMENT = "8C8C8C"  # Kommentare (grau)
-C_NUMBER = "1750EB"   # Zahlen
-C_TAG = "0033B3"      # XML/HTML-Tags
+C_BG = "1E1E1E"       # Hintergrund der Code-Box (fast schwarz)
+C_BORDER = "3C3C3C"   # Rahmen der Code-Box
+C_TEXT = "D4D4D4"     # normaler Code-Text (hellgrau)
+C_KEYWORD = "569CD6"  # Schluesselwoerter (blau)
+C_STRING = "CE9178"   # Zeichenketten (orange)
+C_COMMENT = "6A9955"  # Kommentare (gruen)
+C_NUMBER = "B5CEA8"   # Zahlen (hellgruen)
+C_TAG = "569CD6"      # XML/HTML-Tags
 C_LABEL = "6E7781"    # Sprach-Label
+
+# Farben fuer Tabellen und Merke-Kaesten
+T_HEADER = "2F5496"   # Tabellenkopf (dunkelblau)
+T_BAND = "EAF0F8"     # Zebra-Streifen (hellblau)
+T_BORDER = "C7D0E0"   # Tabellenrahmen (dezent)
+Q_BG = "EEF3FB"       # Merke-Kasten Hintergrund
+Q_BAR = "4472C4"      # Merke-Kasten Balken links
 
 # ---------------------------------------------------------------------------
 # Schluesselwoerter je Sprache
@@ -277,6 +284,37 @@ def _preserve_space(run):
         t.set(qn('xml:space'), 'preserve')
 
 
+def set_table_borders(table, color, sz="4"):
+    tblPr = table._tbl.tblPr
+    borders = OxmlElement('w:tblBorders')
+    for edge in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+        e = OxmlElement('w:' + edge)
+        e.set(qn('w:val'), 'single')
+        e.set(qn('w:sz'), sz)
+        e.set(qn('w:space'), '0')
+        e.set(qn('w:color'), color)
+        borders.append(e)
+    tblPr.append(borders)
+
+
+def set_table_cell_margins(table, top=40, bottom=40, left=110, right=110):
+    tblPr = table._tbl.tblPr
+    mar = OxmlElement('w:tblCellMar')
+    for side, val in (('top', top), ('left', left), ('bottom', bottom), ('right', right)):
+        e = OxmlElement('w:' + side)
+        e.set(qn('w:w'), str(val))
+        e.set(qn('w:type'), 'dxa')
+        mar.append(e)
+    tblPr.append(mar)
+
+
+def set_repeat_header(row):
+    trPr = row._tr.get_or_add_trPr()
+    th = OxmlElement('w:tblHeader')
+    th.set(qn('w:val'), 'true')
+    trPr.append(th)
+
+
 # ---------------------------------------------------------------------------
 # Bloecke: Tabelle und Code-Box
 # ---------------------------------------------------------------------------
@@ -285,20 +323,29 @@ def add_table(doc, rows):
         return
     ncols = max(len(r) for r in rows)
     table = doc.add_table(rows=len(rows), cols=ncols)
-    table.style = 'Table Grid'
+    set_table_borders(table, T_BORDER, "4")
+    set_table_cell_margins(table, top=50, bottom=50, left=120, right=120)
     for ri, row in enumerate(rows):
         for ci in range(ncols):
             cell = table.cell(ri, ci)
             cell.text = ""
             para = cell.paragraphs[0]
+            para.paragraph_format.space_before = Pt(1)
+            para.paragraph_format.space_after = Pt(1)
             val = row[ci] if ci < len(row) else ""
             if ri == 0:
                 run = para.add_run(val)
                 run.bold = True
+                run.font.size = Pt(10)
                 run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
-                shade_cell(cell, "4472C4")
+                shade_cell(cell, T_HEADER)
             else:
                 add_inline(para, val)
+                for r in para.runs:
+                    r.font.size = Pt(10)
+                if ri % 2 == 0:  # jede zweite Datenzeile leicht einfaerben
+                    shade_cell(cell, T_BAND)
+    set_repeat_header(table.rows[0])
     doc.add_paragraph()
 
 
@@ -327,10 +374,11 @@ def add_code_block(doc, code_lines, lang):
 
     table = doc.add_table(rows=1, cols=1)
     table.autofit = True
+    set_table_cell_margins(table, top=80, bottom=80, left=140, right=140)
     cell = table.cell(0, 0)
     cell.text = ""
-    shade_cell(cell, C_BG)
     set_cell_border(cell, C_BORDER)
+    shade_cell(cell, C_BG)
 
     state = {"block": False}
     first = True
@@ -352,14 +400,41 @@ def add_code_block(doc, code_lines, lang):
 
 
 # ---------------------------------------------------------------------------
+# Dokument-Stil (Schrift, Ueberschriften, Seitenraender)
+# ---------------------------------------------------------------------------
+def style_document(doc):
+    normal = doc.styles['Normal']
+    normal.font.name = 'Calibri'
+    normal.font.size = Pt(11)
+    pf = normal.paragraph_format
+    pf.space_after = Pt(6)
+    pf.line_spacing = 1.12
+
+    heads = {1: ('1F3864', 17), 2: ('2E5496', 14), 3: ('2E5496', 12), 4: ('44546A', 11)}
+    for lvl, (col, size) in heads.items():
+        try:
+            st = doc.styles['Heading %d' % lvl]
+            st.font.color.rgb = RGBColor.from_string(col)
+            st.font.size = Pt(size)
+            st.font.bold = True
+            st.font.name = 'Calibri'
+        except KeyError:
+            pass
+
+    for section in doc.sections:
+        section.top_margin = Cm(2.0)
+        section.bottom_margin = Cm(2.0)
+        section.left_margin = Cm(2.2)
+        section.right_margin = Cm(2.2)
+
+
+# ---------------------------------------------------------------------------
 # Hauptparser
 # ---------------------------------------------------------------------------
 def build(md_path, docx_path):
     lines = md_path.read_text(encoding="utf-8").splitlines()
     doc = Document()
-
-    normal = doc.styles['Normal']
-    normal.font.size = Pt(11)
+    style_document(doc)
 
     in_code = False
     code_buf = []
@@ -415,7 +490,10 @@ def build(md_path, docx_path):
 
         m = HEADING_RE.match(line)
         if m:
-            doc.add_heading(m.group(2), level=len(m.group(1)))
+            lvl = len(m.group(1))
+            heading = doc.add_heading(m.group(2), level=lvl)
+            if lvl == 1:
+                add_border(heading, 'bottom', color='2E5496', sz='12', space='4')
             continue
 
         m = BULLET_RE.match(line)
@@ -429,8 +507,10 @@ def build(md_path, docx_path):
         para = doc.add_paragraph()
         add_inline(para, line)
         if quoted:
-            para.paragraph_format.left_indent = Pt(18)
-            add_border(para, 'left', color="8888AA", sz="18", space="8")
+            para.paragraph_format.left_indent = Pt(14)
+            para.paragraph_format.space_after = Pt(2)
+            shade_paragraph(para, Q_BG)
+            add_border(para, 'left', color=Q_BAR, sz="24", space="10")
 
     # offene Bloecke schliessen
     if in_code and code_buf:
