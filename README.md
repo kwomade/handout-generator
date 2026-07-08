@@ -61,19 +61,34 @@ Beim ersten Start richtet der Skill automatisch **Python 3** samt `pypdf` und `p
 
 ---
 
-## 🎓 Benutzung
+## 🎓 So einfach geht's – in 3 Schritten
 
-Öffne Claude Code im Ordner mit deinen Unterlagen und sag einfach:
+**1️⃣ Ordner anlegen & Material reinlegen**
+Erstelle einen Ordner (z. B. `LF08 Java`) und wirf **alle** Lernmaterialien hinein – PDFs, PowerPoint-Folien, Screenshots, Notizen. Alles darf durcheinander sein.
+
+```
+📁 LF08 Java/
+   ├── 📊 Tag1_Projektmanagement.pdf
+   ├── 📊 Tag6_Java.pdf
+   ├── 🖼️ tafelbild.png
+   └── 📝 meine_notizen.md
+```
+
+**2️⃣ Claude Code in diesem Ordner öffnen**
+Öffne ein Terminal **in genau diesem Ordner** und starte Claude Code (`claude`). So weiß der Skill, wo dein Material liegt.
+
+**3️⃣ Skill ausführen**
+Tippe einfach:
 
 ```
 /handout-generator
 ```
 
-…oder ganz natürlich:
+…oder sag es ganz natürlich: *„Erstell mir aus den Dateien in diesem Ordner ein Lern-Handout.“*
 
-> „Erstell mir aus den Dateien in diesem Ordner ein Lern-Handout.“
+➡️ Fertig! Nach kurzer Zeit liegt eine **`<Thema>_Handout.docx`** im selben Ordner – mit Erklärungen, farbigen Code-Boxen, Inhaltsverzeichnis und Selbsttest. 🎉
 
-Das war's. Nach ein paar Sekunden liegt eine `<Thema>_Handout.docx` im Ordner. 🎉
+> 💡 **Tipp:** Zum Ausdrucken das helle Code-Theme nehmen – sag einfach *„nimm das helle Theme“* (spart Toner).
 
 ---
 
