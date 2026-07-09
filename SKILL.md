@@ -82,11 +82,21 @@ Erstelle `<Ordnername_oder_Thema>_Handout.md`. **Erklären, nicht auflisten.** J
 4. **Durchgerechnetes Beispiel** – Code/SQL/Diagramm Schritt für Schritt erklärt.
 5. **„Merke"-Kasten** (als `>`-Blockquote) mit Eselsbrücke/Prüfungstipp.
 
+### Ausführlichkeit: Das Handout muss die Quellen ersetzen (wichtig!)
+**Qualitätsmaßstab:** Wer *nur* das Handout liest, versteht die Themen, **ohne die Quellpräsentationen je gesehen zu haben.** Eine knappe Stichpunkt-Zusammenfassung verfehlt das Ziel – erfahrungsgemäß braucht ein Handout, das diesen Anspruch erfüllt, etwa das **Doppelte** einer reinen Faktenliste. Kein Geschichtsbuch, aber vollständig erklärt. Konkret heißt das:
+- **Kein Fakt ohne Begründung:** nicht nur *dass* etwas gilt, sondern *warum* (nicht „3. NF = keine transitiven Abhängigkeiten", sondern auch, welches Problem das löst und woran man einen Verstoß erkennt).
+- **Jedes Beispiel durchrechnen/durchspielen** – mit konkreten Werten und Zwischenschritten, nicht nur benennen.
+- **Vergleichbares in Gegenüberstellungs-Tabellen** fassen (z. B. klassisch vs. agil, zwei Sprachen, zwei Verfahren) statt in getrennten Listen.
+- **Alle Inhalte der Quellen abdecken** – nichts stillschweigend weglassen, nur weil es „Detail" wirkt; kürzen ist erlaubt, auslassen nicht.
+- **Querverweise** zwischen Kapiteln ziehen, wo Themen zusammenhängen („→ siehe Kapitel X").
+- Enthalten die Quellen **Quiz-/Kompetenzcheck-/Wiederholungsfragen**, diese als Selbsttest übernehmen – **mit Lösung und einem Begründungssatz pro Antwort** (auch warum die falschen Optionen falsch sind).
+
 Weitere Regeln:
 - Deutsch, per „du", Fließtext statt Stichpunkt-Wüste.
 - Fachbegriff beim ersten Mal erklären (deutsch **und** englisch).
-- Am Ende ein **Selbsttest** mit ~10–15 Fragen und Antworten zum Abdecken.
+- Am Ende ein **Selbsttest** mit ~10–15 Fragen und Antworten zum Abdecken (falls die Quellen eigene Fragen enthalten: die echten verwenden, s. o.).
 - Markdown-Umfang, den der Konverter versteht: Überschriften `#`–`####`, Absätze, Aufzählungen `-`, Tabellen `| … |`, Codeblöcke ``` ```lang ```, `**fett**`, `` `code` ``, Zitate/Merke-Kästen `>`.
+- **Bei viel Material kapitelweise arbeiten:** jedes fertige Kapitel sofort als eigene Datei in den Arbeitsordner schreiben (`chapters/01_….md`, `02_….md` …) und am Ende zusammenfügen – so überlebt die Arbeit auch lange Sitzungen und Kontextgrenzen.
 
 ### Code richtig einsetzen (wichtig)
 Der Konverter rendert Codeblöcke als hervorgehobene **Code-Box** mit Syntax-Highlighting. Damit das greift:
